@@ -36,11 +36,11 @@ namespace io = mender::common::io;
 namespace log = mender::common::log;
 namespace path = mender::common::path;
 
-ExpectedOptionalStateData LoadStateData(database::KeyValueDatabase &db) {
+ExpectedOptionalStateData LoadStateData(database::KeyValueDatabase &db, const string &state_key) {
 	StateDataKeys keys;
 	StateData dst;
 
-	auto exp_bytes = db.Read(context::MenderContext::standalone_state_key);
+	auto exp_bytes = db.Read(state_key);
 	if (!exp_bytes) {
 		auto &err = exp_bytes.error();
 		if (err.code == database::MakeError(database::KeyError, "").code) {
@@ -152,12 +152,15 @@ ExpectedOptionalStateData LoadStateData(database::KeyValueDatabase &db) {
 	return dst;
 }
 
-error::Error SaveStateData(database::KeyValueDatabase &db, const StateData &data) {
-	return db.WriteTransaction(
-		[&data](database::Transaction &txn) { return SaveStateData(txn, data); });
+error::Error SaveStateData(
+	database::KeyValueDatabase &db, const StateData &data, const string &state_key) {
+	return db.WriteTransaction([&data, &state_key](database::Transaction &txn) {
+		return SaveStateData(txn, data, state_key);
+	});
 }
 
-error::Error SaveStateData(database::Transaction &txn, const StateData &data) {
+error::Error SaveStateData(
+	database::Transaction &txn, const StateData &data, const string &state_key) {
 	StateDataKeys keys;
 	stringstream ss;
 	ss << "{";
@@ -221,7 +224,7 @@ error::Error SaveStateData(database::Transaction &txn, const StateData &data) {
 	string strdata = ss.str();
 	vector<uint8_t> bytedata(common::ByteVectorFromString(strdata));
 
-	return txn.Write(context::MenderContext::standalone_state_key, bytedata);
+	return txn.Write(state_key, bytedata);
 }
 
 StateMachine::StateMachine(Context &ctx) :
@@ -553,7 +556,7 @@ ResultAndError Install(
 	const string &src,
 	const artifact::config::Signature verify_signature,
 	InstallOptions options) {
-	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB());
+	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB(), ctx.StateKey());
 	if (!exp_in_progress) {
 		return {Result::Failed, exp_in_progress.error()};
 	}
@@ -591,7 +594,7 @@ ResultAndError Install(
 }
 
 ResultAndError Resume(Context &ctx) {
-	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB());
+	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB(), ctx.StateKey());
 	if (!exp_in_progress) {
 		return {Result::Failed, exp_in_progress.error()};
 	}
@@ -634,7 +637,7 @@ ResultAndError Resume(Context &ctx) {
 }
 
 ResultAndError Commit(Context &ctx) {
-	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB());
+	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB(), ctx.StateKey());
 	if (!exp_in_progress) {
 		return {Result::Failed, exp_in_progress.error()};
 	}
@@ -687,7 +690,7 @@ ResultAndError Commit(Context &ctx) {
 }
 
 ResultAndError Rollback(Context &ctx) {
-	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB());
+	auto exp_in_progress = LoadStateData(ctx.main_context.GetMenderStoreDB(), ctx.StateKey());
 	if (!exp_in_progress) {
 		return {Result::Failed, exp_in_progress.error()};
 	}

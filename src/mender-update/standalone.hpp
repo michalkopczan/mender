@@ -53,11 +53,14 @@ namespace artifact = mender::artifact;
 // Return true if there is standalone data (indicating that an update is in progress), false if not.
 // Note: StateData is expected to be empty. IOW it will not clear fields that happen to be
 // empty in the database.
-ExpectedOptionalStateData LoadStateData(database::KeyValueDatabase &db);
+ExpectedOptionalStateData LoadStateData(
+	database::KeyValueDatabase &db, const string &state_key);
 
 StateData StateDataFromPayloadHeaderView(const artifact::PayloadHeaderView &header);
-error::Error SaveStateData(database::KeyValueDatabase &db, const StateData &data);
-error::Error SaveStateData(database::Transaction &txn, const StateData &data);
+error::Error SaveStateData(
+	database::KeyValueDatabase &db, const StateData &data, const string &state_key);
+error::Error SaveStateData(
+	database::Transaction &txn, const StateData &data, const string &state_key);
 
 class StateMachine {
 public:

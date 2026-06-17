@@ -60,9 +60,14 @@ public:
 		stop_before_ = std::move(val);
 	}
 
+	void SetComponent(string val) {
+		component_ = std::move(val);
+	}
+
 protected:
 	bool reboot_exit_code_ {false};
 	vector<string> stop_before_;
+	string component_;
 };
 
 class InstallAction : public BaseInstallAction {

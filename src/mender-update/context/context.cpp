@@ -501,7 +501,10 @@ expected::ExpectedBool ArtifactMatchesContext(
 	auto hdr_depends = hdr_view.GetDepends();
 	AssertOrReturnUnexpected(hdr_depends["device_type"].size() > 0);
 	if (!common::VectorContainsString(hdr_depends["device_type"], compatible_type)) {
-		log::Error("Artifact device type doesn't match");
+		log::Error(
+			"Artifact device type doesn't match: expected the compatible type '" + compatible_type
+			+ "' to be among the Artifact device types ("
+			+ common::StringVectorToString(hdr_depends["device_type"]) + ")");
 		return false;
 	}
 	hdr_depends.erase("device_type");
