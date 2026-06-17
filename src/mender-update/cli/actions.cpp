@@ -265,6 +265,7 @@ error::Error InstallAction::Execute(context::MenderContext &main_context) {
 	events::EventLoop loop;
 	standalone::Context ctx {main_context, loop};
 	ctx.stop_before = std::move(stop_before_);
+	ctx.component_id = std::move(component_);
 	auto result = standalone::Install(ctx, src_);
 	err = ResultHandler(result);
 	if (!reboot_exit_code_
@@ -280,6 +281,7 @@ error::Error ResumeAction::Execute(context::MenderContext &main_context) {
 	events::EventLoop loop;
 	standalone::Context ctx {main_context, loop};
 	ctx.stop_before = std::move(stop_before_);
+	ctx.component_id = std::move(component_);
 
 	auto result = standalone::Resume(ctx);
 	auto err = ResultHandler(result);
@@ -297,6 +299,7 @@ error::Error CommitAction::Execute(context::MenderContext &main_context) {
 	events::EventLoop loop;
 	standalone::Context ctx {main_context, loop};
 	ctx.stop_before = std::move(stop_before_);
+	ctx.component_id = std::move(component_);
 	auto result = standalone::Commit(ctx);
 	return ResultHandler(result);
 }
@@ -305,6 +308,7 @@ error::Error RollbackAction::Execute(context::MenderContext &main_context) {
 	events::EventLoop loop;
 	standalone::Context ctx {main_context, loop};
 	ctx.stop_before = std::move(stop_before_);
+	ctx.component_id = std::move(component_);
 	auto result = standalone::Rollback(ctx);
 	return ResultHandler(result);
 }

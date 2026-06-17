@@ -63,12 +63,23 @@ const conf::CliOption opt_stop_before {
 	.parameter = "STATE",
 };
 
+const conf::CliOption opt_component {
+	.long_option = "component",
+	.description =
+		"Track this standalone installation under a component-specific identity. This allows "
+		"several independent standalone installations (for example driven by the Mender "
+		"orchestrator) to be in progress simultaneously on the same device without conflicting. "
+		"The same value must be passed to the matching `resume`, `commit` and `rollback` commands.",
+	.parameter = "COMPONENT",
+};
+
 const conf::CliCommand cmd_commit {
 	.name = "commit",
 	.description = "Commit current Artifact. Returns (2) if no update in progress",
 	.options =
 		{
 			opt_stop_before,
+			opt_component,
 		},
 };
 
@@ -93,6 +104,7 @@ const conf::CliCommand cmd_install {
 					"Return exit code 4 if a manual reboot is required after the Artifact installation.",
 			},
 			opt_stop_before,
+			opt_component,
 		},
 };
 
@@ -107,6 +119,7 @@ const conf::CliCommand cmd_resume {
 					"Return exit code 4 if a manual reboot is required after the Artifact installation.",
 			},
 			opt_stop_before,
+			opt_component,
 		},
 };
 
@@ -116,6 +129,7 @@ const conf::CliCommand cmd_rollback {
 	.options =
 		{
 			opt_stop_before,
+			opt_component,
 		},
 };
 
@@ -161,7 +175,8 @@ static error::Error CommonInstallFlagsHandler(
 	conf::CmdlineOptionsIterator &iter,
 	string *filename,
 	bool *reboot_exit_code,
-	vector<string> *stop_before) {
+	vector<string> *stop_before,
+	string *component) {
 	while (true) {
 		auto arg = iter.Next();
 		if (!arg) {
@@ -178,6 +193,13 @@ static error::Error CommonInstallFlagsHandler(
 					conf::InvalidOptionsError, "--stop-before needs an argument");
 			}
 			stop_before->push_back(value.value);
+			continue;
+		} else if (component != nullptr and value.option == "--component") {
+			if (value.value == "") {
+				return conf::MakeError(
+					conf::InvalidOptionsError, "--component needs an argument");
+			}
+			*component = value.value;
 			continue;
 		} else if (value.option != "") {
 			return conf::MakeError(conf::InvalidOptionsError, "No such option: " + value.option);
@@ -237,7 +259,9 @@ ExpectedActionPtr ParseUpdateArguments(
 		string filename;
 		bool reboot_exit_code = false;
 		vector<string> stop_before;
-		auto err = CommonInstallFlagsHandler(iter, &filename, &reboot_exit_code, &stop_before);
+		string component;
+		auto err = CommonInstallFlagsHandler(
+			iter, &filename, &reboot_exit_code, &stop_before, &component);
 		if (err != error::NoError) {
 			return expected::unexpected(err);
 		}
@@ -245,13 +269,16 @@ ExpectedActionPtr ParseUpdateArguments(
 		auto install_action = make_shared<InstallAction>(filename);
 		install_action->SetRebootExitCode(reboot_exit_code);
 		install_action->SetStopBefore(std::move(stop_before));
+		install_action->SetComponent(std::move(component));
 		return install_action;
 	} else if (start[0] == "resume") {
 		conf::CmdlineOptionsIterator iter(start + 1, end, cmd_resume.options);
 
 		bool reboot_exit_code = false;
 		vector<string> stop_before;
-		auto err = CommonInstallFlagsHandler(iter, nullptr, &reboot_exit_code, &stop_before);
+		string component;
+		auto err = CommonInstallFlagsHandler(
+			iter, nullptr, &reboot_exit_code, &stop_before, &component);
 		if (err != error::NoError) {
 			return expected::unexpected(err);
 		}
@@ -259,30 +286,35 @@ ExpectedActionPtr ParseUpdateArguments(
 		auto resume_action = make_shared<ResumeAction>();
 		resume_action->SetRebootExitCode(reboot_exit_code);
 		resume_action->SetStopBefore(std::move(stop_before));
+		resume_action->SetComponent(std::move(component));
 		return resume_action;
 	} else if (start[0] == "commit") {
 		conf::CmdlineOptionsIterator iter(start + 1, end, cmd_commit.options);
 
 		vector<string> stop_before;
-		auto err = CommonInstallFlagsHandler(iter, nullptr, nullptr, &stop_before);
+		string component;
+		auto err = CommonInstallFlagsHandler(iter, nullptr, nullptr, &stop_before, &component);
 		if (err != error::NoError) {
 			return expected::unexpected(err);
 		}
 
 		auto commit_action = make_shared<CommitAction>();
 		commit_action->SetStopBefore(std::move(stop_before));
+		commit_action->SetComponent(std::move(component));
 		return commit_action;
 	} else if (start[0] == "rollback") {
 		conf::CmdlineOptionsIterator iter(start + 1, end, cmd_rollback.options);
 
 		vector<string> stop_before;
-		auto err = CommonInstallFlagsHandler(iter, nullptr, nullptr, &stop_before);
+		string component;
+		auto err = CommonInstallFlagsHandler(iter, nullptr, nullptr, &stop_before, &component);
 		if (err != error::NoError) {
 			return expected::unexpected(err);
 		}
 
 		auto rollback_action = make_shared<RollbackAction>();
 		rollback_action->SetStopBefore(std::move(stop_before));
+		rollback_action->SetComponent(std::move(component));
 		return rollback_action;
 	} else if (start[0] == "daemon") {
 		conf::CmdlineOptionsIterator iter(start + 1, end, cmd_daemon.options);

@@ -62,7 +62,7 @@ void SaveState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poster) {
 		ctx.state_data.rolled_back = false;
 	}
 
-	auto err = SaveStateData(ctx.main_context.GetMenderStoreDB(), ctx.state_data);
+	auto err = SaveStateData(ctx.main_context.GetMenderStoreDB(), ctx.state_data, ctx.StateKey());
 	if (err != error::NoError) {
 		UpdateResult(ctx.result_and_error, {Result::Failed, err});
 		poster.PostEvent(StateEvent::Failure);
@@ -495,7 +495,7 @@ void CleanupState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poster) {
 	if (data.rolled_back) {
 		// Successful rollback.
 		auto &db = ctx.main_context.GetMenderStoreDB();
-		err = db.Remove(context::MenderContext::standalone_state_key);
+		err = db.Remove(ctx.StateKey());
 	} else {
 		if (data.failed) {
 			// Unsuccessful rollback or missing rollback support.
@@ -511,8 +511,8 @@ void CleanupState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poster) {
 			data.artifact_group,
 			data.artifact_provides,
 			data.artifact_clears_provides,
-			[](database::Transaction &txn) {
-				return txn.Remove(context::MenderContext::standalone_state_key);
+			[&ctx](database::Transaction &txn) {
+				return txn.Remove(ctx.StateKey());
 			});
 	}
 	if (err != error::NoError) {
@@ -541,7 +541,7 @@ void ScriptRunnerState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poste
 void ExitState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poster) {
 	auto err =
 		ctx.main_context.GetMenderStoreDB().WriteTransaction([&ctx](database::Transaction &txn) {
-			auto exp_bytes = txn.Read(context::MenderContext::standalone_state_key);
+			auto exp_bytes = txn.Read(ctx.StateKey());
 			if (!exp_bytes) {
 				if (exp_bytes.error().code == database::MakeError(database::KeyError, "").code) {
 					// If the stata data is not saved, just do nothing here.
@@ -560,7 +560,7 @@ void ExitState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &poster) {
 			// should return success, not failure.
 			if (ctx.state_data.failed) {
 				ctx.state_data.failed = false;
-				return SaveStateData(txn, ctx.state_data);
+				return SaveStateData(txn, ctx.state_data, ctx.StateKey());
 			} else {
 				return error::NoError;
 			}

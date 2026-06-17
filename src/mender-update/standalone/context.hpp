@@ -152,6 +152,22 @@ struct Context {
 
 	StateData state_data;
 
+	// Optional component identity used by the orchestrator to run several independent standalone
+	// installations concurrently on the same System Device. When set, the standalone state is
+	// stored under a component-specific database key so that each component's in-progress
+	// installation is tracked separately. When empty, the default (single-installation) key is
+	// used, preserving backwards-compatible behaviour.
+	string component_id;
+
+	// Returns the database key under which this installation's standalone state is stored. The key
+	// is namespaced by `component_id` when one is set.
+	string StateKey() const {
+		if (component_id.empty()) {
+			return context::MenderContext::standalone_state_key;
+		}
+		return context::MenderContext::standalone_state_key + "/" + component_id;
+	}
+
 	vector<string> stop_before;
 
 	string artifact_src;
