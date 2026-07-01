@@ -154,6 +154,11 @@ struct Context {
 
 	vector<string> stop_before;
 
+	// When set, the Artifact's compatible (device) types are matched against this value
+	// instead of the device's device_type. Used when installing component Artifacts on
+	// behalf of Mender Orchestrator, where the compatible type is a component type.
+	optional<string> compatible_type_override;
+
 	string artifact_src;
 
 	unique_ptr<update_module::UpdateModule> update_module;

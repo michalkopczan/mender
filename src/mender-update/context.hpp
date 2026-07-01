@@ -96,7 +96,13 @@ public:
 		return config_;
 	}
 
-	expected::ExpectedBool MatchesArtifactDepends(const artifact::HeaderView &hdr_view);
+	// If compatible_type_override is set, the Artifact's `device_type` depends are matched
+	// against that value instead of the value resolved by GetCompatibleType() (normally the
+	// device's device_type). Used when installing component Artifacts on behalf of Mender
+	// Orchestrator, where the compatible type is a component type rather than the device type.
+	expected::ExpectedBool MatchesArtifactDepends(
+		const artifact::HeaderView &hdr_view,
+		const optional<string> &compatible_type_override = {});
 
 	// Suffix used for updates that either can't roll back or fail their rollback.
 	static const string broken_artifact_name_suffix;

@@ -265,6 +265,9 @@ error::Error InstallAction::Execute(context::MenderContext &main_context) {
 	events::EventLoop loop;
 	standalone::Context ctx {main_context, loop};
 	ctx.stop_before = std::move(stop_before_);
+	if (!component_type_.empty()) {
+		ctx.compatible_type_override = component_type_;
+	}
 	auto result = standalone::Install(ctx, src_);
 	err = ResultHandler(result);
 	if (!reboot_exit_code_

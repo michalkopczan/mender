@@ -467,12 +467,18 @@ error::Error MenderContext::CommitArtifactData(
 	});
 }
 
-expected::ExpectedBool MenderContext::MatchesArtifactDepends(const artifact::HeaderView &hdr_view) {
-	auto ex_compatible_type = GetCompatibleType(hdr_view.type_info.type);
-	if (!ex_compatible_type) {
-		return expected::unexpected(ex_compatible_type.error());
+expected::ExpectedBool MenderContext::MatchesArtifactDepends(
+	const artifact::HeaderView &hdr_view, const optional<string> &compatible_type_override) {
+	string compatible_type;
+	if (compatible_type_override) {
+		compatible_type = compatible_type_override.value();
+	} else {
+		auto ex_compatible_type = GetCompatibleType(hdr_view.type_info.type);
+		if (!ex_compatible_type) {
+			return expected::unexpected(ex_compatible_type.error());
+		}
+		compatible_type = ex_compatible_type.value();
 	}
-	auto &compatible_type = ex_compatible_type.value();
 
 	auto ex_provides = LoadProvides();
 	if (!ex_provides) {

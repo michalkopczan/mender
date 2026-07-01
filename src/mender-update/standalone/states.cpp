@@ -287,7 +287,8 @@ void PrepareDownloadState::OnEnter(Context &ctx, sm::EventPoster<StateEvent> &po
 		cout << "Installing artifact..." << endl;
 	}
 
-	auto exp_matches = main_context.MatchesArtifactDepends(header.header);
+	auto exp_matches =
+		main_context.MatchesArtifactDepends(header.header, ctx.compatible_type_override);
 	if (!exp_matches) {
 		UpdateResult(
 			ctx.result_and_error,

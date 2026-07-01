@@ -71,10 +71,15 @@ public:
 		src_ {src} {
 	}
 
+	void SetComponentType(string val) {
+		component_type_ = std::move(val);
+	}
+
 	error::Error Execute(context::MenderContext &main_context) override;
 
 private:
 	string src_;
+	string component_type_;
 };
 
 class ResumeAction : public BaseInstallAction {

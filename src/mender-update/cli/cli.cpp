@@ -77,6 +77,16 @@ const conf::CliCommand cmd_daemon {
 	.description = "Start the client as a background service",
 };
 
+const conf::CliOption opt_component_type {
+	.long_option = "component-type",
+	.description =
+		"Match the Artifact against the given component type instead of the device's "
+		"device type. Intended for use when mender-update is a backend for "
+		"Mender Orchestrator interfaces, where the Artifact's compatible types are "
+		"component types rather than the device type.",
+	.parameter = "TYPE",
+};
+
 const conf::CliCommand cmd_install {
 	.name = "install",
 	.description = "Mender Artifact to install - local file or a URL",
@@ -93,6 +103,7 @@ const conf::CliCommand cmd_install {
 					"Return exit code 4 if a manual reboot is required after the Artifact installation.",
 			},
 			opt_stop_before,
+			opt_component_type,
 		},
 };
 
@@ -161,7 +172,8 @@ static error::Error CommonInstallFlagsHandler(
 	conf::CmdlineOptionsIterator &iter,
 	string *filename,
 	bool *reboot_exit_code,
-	vector<string> *stop_before) {
+	vector<string> *stop_before,
+	string *component_type = nullptr) {
 	while (true) {
 		auto arg = iter.Next();
 		if (!arg) {
@@ -178,6 +190,13 @@ static error::Error CommonInstallFlagsHandler(
 					conf::InvalidOptionsError, "--stop-before needs an argument");
 			}
 			stop_before->push_back(value.value);
+			continue;
+		} else if (component_type != nullptr and value.option == "--component-type") {
+			if (value.value == "") {
+				return conf::MakeError(
+					conf::InvalidOptionsError, "--component-type needs an argument");
+			}
+			*component_type = value.value;
 			continue;
 		} else if (value.option != "") {
 			return conf::MakeError(conf::InvalidOptionsError, "No such option: " + value.option);
@@ -237,7 +256,9 @@ ExpectedActionPtr ParseUpdateArguments(
 		string filename;
 		bool reboot_exit_code = false;
 		vector<string> stop_before;
-		auto err = CommonInstallFlagsHandler(iter, &filename, &reboot_exit_code, &stop_before);
+		string component_type;
+		auto err = CommonInstallFlagsHandler(
+			iter, &filename, &reboot_exit_code, &stop_before, &component_type);
 		if (err != error::NoError) {
 			return expected::unexpected(err);
 		}
@@ -245,6 +266,7 @@ ExpectedActionPtr ParseUpdateArguments(
 		auto install_action = make_shared<InstallAction>(filename);
 		install_action->SetRebootExitCode(reboot_exit_code);
 		install_action->SetStopBefore(std::move(stop_before));
+		install_action->SetComponentType(std::move(component_type));
 		return install_action;
 	} else if (start[0] == "resume") {
 		conf::CmdlineOptionsIterator iter(start + 1, end, cmd_resume.options);
