@@ -4145,7 +4145,10 @@ protected:
 		for (const auto &log : logs_in_order) {
 			size_t current_pos = output.find(log, last_pos);
 			EXPECT_NE(current_pos, std::string::npos)
-				<< "Could not find log: '" << log << "' after previous match.";
+				<< "Could not find log: '" << log << "' after previous match.\n"
+				<< "------------------------ Full captured output ------------------------\n"
+				<< output
+				<< "----------------------------------------------------------------------";
 			if (current_pos == std::string::npos) {
 				return;
 			}
